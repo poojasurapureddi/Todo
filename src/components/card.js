@@ -1,73 +1,88 @@
 import React, { useEffect, useState } from 'react';
 import './TaskManager.css';
 import PopUp from './popUp';
-import { Draggable } from 'react-draggable';
 import { useDispatch } from 'react-redux';
 import { removeTodo } from '../redux/todoSlice';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
+const ItemTypes = {
+  TASK: 'task',
+};
 
 function TaskManager({data}) {
-    console.log(data,"test")
   const [showModal, setShowModal] = useState(false);
+  const [tasks, setTasks] = useState(data);
 
-useEffect=(()=>{
-},[data])
+  useEffect(() => {
+    setTasks(data);
+  }, [data]);
 
+  const moveTask = (id, status) => {
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === id ? { ...task, text: { ...task.text, status } } : task
+      )
+    );
+  };
 
-
-  const todoTasks = data.filter(task => task?.text?.status === 'todo');
-  const inProgressTasks = data.filter(task => task?.text?.status === 'inprogress');
-  const completedTasks = data.filter(task => task?.text?.status === 'completed');
+  const todoTasks = tasks.filter(task => task?.text?.status === 'todo');
+  const inProgressTasks = tasks.filter(task => task?.text?.status === 'inprogress');
+  const completedTasks = tasks.filter(task => task?.text?.status === 'completed');
   const openModal = () => setShowModal(true);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Task Manager</h1>
-        <button className="create-task-btn" onClick={openModal}>Create Task</button>
-      </header>
-      
-      <div className="dashboard">
-        <div className="column">
-          <h2 className="column-title">To-Do</h2>
-          <div className="task-list">
-            {todoTasks.map(task => (
-              <TaskCard key={task.id} task={task} onDelete={()=>console.log("delete")} />
-            ))}
-          </div>
-        </div>
+    <DndProvider backend={HTML5Backend}>
+      <div className="app">
+        <header className="app-header">
+          <h1>Task Manager</h1>
+          <button className="create-task-btn" onClick={openModal}>Create Task</button>
+        </header>
         
-        <div className="column">
-          <h2 className="column-title">In Progress</h2>
-          <div className="task-list">
-            {inProgressTasks.map(task => (
-              <TaskCard key={task.id} task={task} onDelete={()=>console.log("delete")} />
-            ))}
-          </div>
+        <div className="dashboard">
+          <Column title="To-Do" tasks={todoTasks} moveTask={moveTask} status="todo" />
+          <Column title="In Progress" tasks={inProgressTasks} moveTask={moveTask} status="inprogress" />
+          <Column title="Completed" tasks={completedTasks} moveTask={moveTask} status="completed" />
         </div>
-        
-        <div className="column">
-          <h2 className="column-title">Completed</h2>
-          <div className="task-list">
-            {completedTasks.map(task => (
-              <TaskCard key={task.id} task={task} onDelete={()=>console.log("delete")} />
-            ))}
-          </div>
-        </div>
-      </div>
 
-    <PopUp setShowModal={setShowModal} showModal={showModal}/>
+        <PopUp setShowModal={setShowModal} showModal={showModal}/>
+      </div>
+    </DndProvider>
+  );
+}
+
+function Column({ title, tasks, moveTask, status }) {
+  const [, drop] = useDrop({
+    accept: ItemTypes.TASK,
+    drop: (item) => moveTask(item.id, status),
+  });
+
+  return (
+    <div className="column" ref={drop}>
+      <h2 className="column-title">{title}</h2>
+      <div className="task-list">
+        {tasks.map(task => (
+          <TaskCard key={task.id} task={task} />
+        ))}
+      </div>
     </div>
   );
 }
 
-function TaskCard({ task, onDelete }) {
+function TaskCard({ task }) {
   const { id, title, description, dueDate, priority } = task?.text;
   const dispatch = useDispatch();
-  console.log(id,task?.id)
+
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: ItemTypes.TASK,
+    item: { id: task.id },
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+  }));
+
   return (
-    
-    <div className={`task-card priority-${priority}`}>
+    <div ref={drag} className={`task-card priority-${priority}`} style={{ opacity: isDragging ? 0.5 : 1 }}>
       <h3>{title}</h3>
       <p className="task-description">{description}</p>
       {dueDate && <div className="task-due-date">Due: {dueDate}</div>}
@@ -78,7 +93,5 @@ function TaskCard({ task, onDelete }) {
     </div>
   );
 }
-
-  
 
 export default TaskManager;
