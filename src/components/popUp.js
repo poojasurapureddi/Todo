@@ -65,7 +65,7 @@ function PopUp({showModal,setShowModal}) {
         return !errors.title && !errors.dueDate;
       };
     
-      const handleSubmit = (e) => {
+      const handleSubmit = async(e) => {
         e.preventDefault();
         
         if (validateForm()) {
@@ -81,6 +81,28 @@ function PopUp({showModal,setShowModal}) {
             priority: formData.priority,
             status: 'todo'
           };
+          const response = await fetch(
+            `https://dnlpdmakrjidsefocpba.supabase.co/rest/v1/Todo`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                apikey : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRubHBkbWFrcmppZHNlZm9jcGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0NDMwNzgsImV4cCI6MjA1ODAxOTA3OH0.ArP_L3QsC3dIOyioxVk16gc-OuXEN7-V0l6787fxt9s"
+
+
+
+              },
+              body: JSON.stringify({
+                "description": formData.description,
+                "due_date": formData.dueDate ? new Date(formData.dueDate).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                }): '',
+                "status":"Todo"
+              })
+        });
+        console.log(response,"response");
           dispatch(addTodo(newTask));
           closeModal();
         }
